@@ -23,11 +23,6 @@
         <activity
             android:name="aarne.kyppo.shoplistnotifier.app.MainActivity"
             android:label="@string/app_name" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <service
@@ -37,6 +32,19 @@
         <activity
             android:name="aarne.kyppo.shoplistnotifier.app.MapActivity"
             android:label="@string/title_activity_map" >
+        </activity>
+        <activity
+            android:name="aarne.kyppo.shoplistnotifier.app.ShoppingListActivity"
+            android:label="@string/title_activity_shopping_list" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="aarne.kyppo.shoplistnotifier.app.NewShoppingListActivity"
+            android:label="@string/title_activity_new_shopping_list" >
         </activity>
     </application>
 

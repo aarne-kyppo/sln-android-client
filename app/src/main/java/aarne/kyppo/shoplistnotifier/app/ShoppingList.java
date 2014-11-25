@@ -2,6 +2,7 @@ package aarne.kyppo.shoplistnotifier.app;
 
 import android.util.Log;
 
+import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -12,7 +13,7 @@ import java.util.GregorianCalendar;
 /**
  * Created by aarnek on 28.8.2014.
  */
-public class ShoppingList {
+public class ShoppingList implements Serializable{
     private int id;
     private Date start;
     private String start_str;

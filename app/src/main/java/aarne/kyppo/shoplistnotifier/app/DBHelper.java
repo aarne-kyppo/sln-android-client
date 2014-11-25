@@ -15,7 +15,9 @@ import java.util.List;
  */
 public class DBHelper extends SQLiteOpenHelper{
 
-    public static final int SHOPPINGLIST_VERSION = 4;
+    //TODO: Separate schema-classes for database tables. Current solution is not ideal.
+
+    public static final int SHOPPINGLIST_VERSION = 5;
     public static final String SHOPPINGLIST_TABLE_NAME = "shoppinglist";
     public static final String DATABASE = "sln";
 
@@ -30,7 +32,7 @@ public class DBHelper extends SQLiteOpenHelper{
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i2) {
         for(int idx=i;idx<=i2;idx++)
         {
-            Log.d("ONUPGRADE","Database version: " + i2);
+            Log.d("ONUPGRADE","Database version: " + idx);
             switch(idx)
             {
                 case 1:
@@ -39,8 +41,11 @@ public class DBHelper extends SQLiteOpenHelper{
                 }
                 case 4: {
                     String sql = "alter table " + SHOPPINGLIST_TABLE_NAME + " add column title text";
-                    sqLiteDatabase.execSQL(sql);
+                    //sqLiteDatabase.execSQL(sql);
                     break;
+                }
+                case 5:{
+                    String sql = "create table listitem (id integer primary key NOT NULL, list_id INTEGER NOT NULL, name TEXT NOT NULL, quantity integer NOT NULL, checked TINYINT(1) NOT NULL)";
                 }
             }
         }
@@ -66,6 +71,37 @@ public class DBHelper extends SQLiteOpenHelper{
             }while(c.moveToNext());
         }
         return list;
+    }
+    public ShoppingList getShoppingList(int id)
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        String query = "select id,start,end,title from " + SHOPPINGLIST_TABLE_NAME + " where id = " + id;
+        Cursor c = db.rawQuery(query,null);
+        ShoppingList shp = null;
+        if(c.moveToFirst())
+        {
+            shp = new ShoppingList();
+            shp.setId(c.getInt(0));
+            shp.setStart(c.getString(1));
+            shp.setEnd(c.getString(2));
+            shp.setTitle(c.getString(3));
+        }
+        return shp;
+    }
+    public int getEarliestShoppingListID()
+    {
+        SQLiteDatabase db = this.getWritableDatabase();
+        String query = "select id from " + SHOPPINGLIST_TABLE_NAME + " order by time(start) LIMIT 1";
+        Log.d("EARLIEST LIST QUERY",query);
+        Cursor c = db.rawQuery(query,null);
+        int shp = -1;
+        //TODO: Check for empty list
+        if(c.moveToFirst())
+        {
+            shp = c.getInt(0);
+
+        }
+        return shp;
     }
     public void addShoppingList(ShoppingList sl)
     {

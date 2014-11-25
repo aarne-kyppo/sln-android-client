@@ -58,10 +58,13 @@ public class NewShoppingListActivity extends ActionBarActivity {
         DBHelper helper = new DBHelper(this);
         helper.addShoppingList(sl);
 
+        int id = helper.getEarliestShoppingListID();
+        Log.d("EARLIEST ID", id + "");
+
         helper = null;
-        sl = null;
 
         Intent i = new Intent(this,ShoppingListActivity.class);
+        i.putExtra("earliest",id);
         startActivity(i);
     }
 

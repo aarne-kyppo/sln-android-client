@@ -1,7 +1,18 @@
 package aarne.kyppo.shoplistnotifier.app;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,6 +37,41 @@ public class ShoppingListActivity extends ActionBarActivity {
 
     private final int DELTA = 50;
     private float prevX = Float.NaN;
+    private boolean bound = false;
+    private Messenger mservice;
+
+    final DBHelper helper = new DBHelper(this);
+
+    private ServiceConnection conn;
+    public class IncomingHandler extends Handler
+    {
+        boolean mapdisplayed = true;
+        public void handleMessage(Message msg)
+        {
+            Log.d("ON_HANDLER","ooajfoisdjfgovfd");
+            switch (msg.what)
+            {
+                case LocationService.INCOMING_DATA:
+                    String data = msg.getData().getString("data");
+                    /*if(!mapdisplayed)
+                    {
+                        Intent i = new Intent(ShoppingListActivity.this,MapActivity.class);
+                        i.putExtra("data",data);
+                        startActivity(i);
+                        mapdisplayed = true;
+                    }*/
+                    break;
+                case LocationService.STORE_FOUND:
+                    String store = msg.getData().getString("store");
+
+                    ShoppingList sl = helper.getShoppingList(msg.getData().getInt("id"));
+
+                    notifyOfStore("Store found",store,sl);
+            }
+        }
+    }
+
+    final Messenger messenger = new Messenger(new IncomingHandler());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,9 +80,45 @@ public class ShoppingListActivity extends ActionBarActivity {
 
         ListView lv = (ListView) findViewById(R.id.list);
 
-        final DBHelper helper = new DBHelper(this);
+        conn = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                mservice = new Messenger(iBinder);
+                Message m = Message.obtain(null, LocationService.REGISTER_CLIENT);
+                m.replyTo = messenger;
+                try {
+                    mservice.send(m);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+                Message m = Message.obtain(null, LocationService.UNREGISTER_CLIENT);
+                m.replyTo = messenger;
+                try {
+                    mservice.send(m);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                    Log.d("UNREGISTER FAILED","");
+                }
+                Log.d("FFF","fsdogikjdfijfk");
+            }
+        };
+
 
         shoppinglists = helper.getShoppingLists();
+
+        if(shoppinglists.size() > 0)
+        {
+            BindService();
+        }
+        else
+        {
+            UnbindService();
+        }
 
         Adapter adapter = new Adapter(this,android.R.layout.simple_list_item_1, shoppinglists);
         lv.setAdapter(adapter);
@@ -63,8 +145,21 @@ public class ShoppingListActivity extends ActionBarActivity {
                             }
                         });
         lv.setOnTouchListener(touchListener);
-    }
 
+        //Inform service about earliest shoppinglist.
+        if(getIntent().hasExtra("earliest")) {
+            Message message = Message.obtain(null,LocationService.EARLIEST_LIST);
+            Bundle b = new Bundle();
+            Log.d("EARLIEST ID EXTRA",getIntent().getExtras().getInt("earliest")+"");
+            b.putInt("id",getIntent().getExtras().getInt("earliest"));
+            message.setData(b);
+            try {
+                mservice.send(message);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     public void newShoppingList(View v)
     {
         Intent i = new Intent(this,NewShoppingListActivity.class);
@@ -108,4 +203,37 @@ public class ShoppingListActivity extends ActionBarActivity {
             return rowview;
         }
     }
+    private void UnbindService()
+    {
+        if(bound)
+        {
+            unbindService(conn);
+            bound = false;
+        }
+    }
+    private void BindService()
+    {
+        if(!bound)
+        {
+            bindService(new Intent(ShoppingListActivity.this, LocationService.class), conn, Context.BIND_AUTO_CREATE);
+            bound = true;
+        }
+    }
+
+
+
+    public void notifyOfStore(String title, String store, ShoppingList sl)
+    {
+        NotificationCompat.Builder b = new NotificationCompat.Builder(this).setSmallIcon(R.drawable.common_signin_btn_icon_dark).setContentTitle(title).setContentText(store);
+        Intent i = new Intent(this,MainActivity.class);
+
+        TaskStackBuilder taskbuilder = TaskStackBuilder.create(this);
+        taskbuilder.addParentStack(MainActivity.class);
+        taskbuilder.addNextIntent(i);
+        PendingIntent resultpend = taskbuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        b.setContentIntent(resultpend);
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.notify(0,b.build());
+    }
+
 }
